@@ -1,0 +1,165 @@
+2007-01-17 thu wrote
+2007-04-13 fri change
+2007-10-13 sat change
+
+TIFF read時の、TIFFGetField(-)使用例
+
+/*--------------------------------------------------------*/
+/* TIFF canvas情報 */
+
+/* 画像幅 */
+TIFFGetField( &tiff_head, TIFFTAG_IMAGEWIDTH,  &uint32 );
+
+/* 画像高さ */
+TIFFGetField( &tiff_head, TIFFTAG_IMAGELENGTH, &uint32 );
+
+/* １サンプルあたりのビット数(B/Wなら1,RGBなら8) */
+TIFFGetField( &tiff_head, TIFFTAG_BITSPERSAMPLE, &uint16);
+	switch (uint16) {
+	case 1:
+	case 8:
+	case 16:
+	break;
+	default: printf("bad bitspersample"); break;
+	}
+
+/* １ピクセルが何サンプル(channels)(RGBなら3) */
+TIFFGetField( &tiff_head, TIFFTAG_SAMPLESPERPIXEL, &uint16 );
+	switch (uint16) {
+	case 1:
+	case 3:
+	case 4: break;
+	default: printf("bad samplesperpixel"); break;
+	}
+
+/* データ順に対する画像の表示方向 */
+TIFFGetField( &tiff_head, TIFFTAG_ORIENTATION, &uint16 );
+	switch (uint16) {
+	case 0:/* 古いphotoshopで作成したTIFFデータはゼロになっている */
+		/* 無視する。画像はORIENTATION_TOPLEFTとして扱う */
+	case ORIENTATION_TOPLEFT:  /* =1 左上原点0度回転 TIFF,SGI  */
+	case ORIENTATION_BOTLEFT:  /* =4 左下原点0度回転 OpenGL */
+		break;
+
+	case ORIENTATION_TOPRIGHT: /* =2 */
+	case ORIENTATION_BOTRIGHT: /* =3 左上原点180度回転 */
+	case ORIENTATION_LEFTTOP:  /* =5 */
+	case ORIENTATION_RIGHTTOP: /* =6 左上原点270度回転 */
+	case ORIENTATION_RIGHTBOT: /* =7 */
+	case ORIENTATION_LEFTBOT:  /* =8 左上原点90度回転 */
+		break;/* これらはサポートしない */
+	}
+
+/* 解像度 */
+TIFFGetField( &tiff_head, TIFFTAG_XRESOLUTION, &float );
+TIFFGetField( &tiff_head, TIFFTAG_YRESOLUTION, &float );
+TIFFGetField( &tiff_head, TIFFTAG_RESOLUTIONUNIT, &uint16 );
+	switch (uint16) {
+	case RESUNIT_NONE:       /* =1 */
+	case RESUNIT_INCH:       /* =2 */
+	case RESUNIT_CENTIMETER: /* =3 */
+		break;
+	}
+
+-------+---------------+-------+------------------------------------
+拡張子	画像種類	samples	bits
+-------+---------------+-------+------------------------------------
+tif	RGBA		4	std::numeric_limits<unsigned char>::digits * sizeof(unsigned char)/
+				std::numeric_limits<unsigned char>::digits * sizeof(unsigned short)/
+				std::numeric_limits<unsigned char>::digits * sizeof(double)
+	RGB		3	std::numeric_limits<unsigned char>::digits * sizeof(unsigned char)/
+				std::numeric_limits<unsigned char>::digits * sizeof(unsigned short)/
+				std::numeric_limits<unsigned char>::digits * sizeof(double)
+	grayscale	1	std::numeric_limits<unsigned char>::digits * sizeof(unsigned char)/
+				std::numeric_limits<unsigned char>::digits * sizeof(unsigned short)/
+				std::numeric_limits<unsigned char>::digits * sizeof(double)
+	B/W		1	1
+-------+---------------+-------+------------------------------------
+
+/*--------------------------------------------------------*/
+/* TIFF read-->保存状態復元情報, write-->固定 */
+
+/* Write時16bitsサンプリング画像ではbytes swapが必要 */
+/*
+	2バイト(16bits)サンプリングのデータで、
+	システムがリトルインディアン(intel)で
+		ビッグインディアン保存が指定(TIFFOpen(,wb))されているか
+	システムかビッグインディアン(motoroler)で
+		リトルインディアン保存が指定(TIFFOpen(,wl))されている。
+*/
+
+/* strip/single-strip画像(保存file)情報 */
+/*
+	single-strip画像は、Windowsマシンで問題?
+	1本のstripが未圧縮の状態で8Kバイト以上のデータをとらないこと
+	が推奨されている
+*/
+tsize_t  t_strip_size = TIFFStripSize(&tiff_head);
+	/* typedef int32 tsize_t; */
+tstrip_t t_strip_count = TIFFNumberOfStrips(&tiff_head);
+	/* typedef uint32 tstrip_t; */
+
+/* strip読み書き */
+tsize_t TIFFReadEncodedStrip(TIFF* tif,
+	tstrip_t strip, tdata_t buf,tsize_t size);
+tsize_t TIFFWriteEncodedStrip(TIFF* tif,
+	tstrip_t strip, tdata_t buf,tsize_t size);
+	/* typedef void* tdata_t; */
+
+/* tile画像(保存file)情報 */
+TIFFGetField( &tiff_head, TIFFTAG_TILEWIDTH, &uint32 );
+TIFFGetField( &tiff_head, TIFFTAG_TILELENGTH, &uint32 );/* タイル高さ */
+TIFFIsTiled( &tiff_head ); /* タイルフォーマットか否か */
+/*
+	TIFFIsTiled() calls isTiled( &tiff_head ),
+	isTiled() is macro, followed...
+	#define isTiled(tif) (((tif)->tif_flags & TIFF_ISTILED) != 0)
+*/
+
+/* 色チャンネルデータ格納順 */
+TIFFGetField( &tiff_head, TIFFTAG_PLANARCONFIG, &uint16 );
+	switch (uint16) {
+	case PLANARCONFIG_CONTIG:   break; /* =1 RGBRGB... -> Default */
+	case PLANARCONFIG_SEPARATE: break; /* =2 RRRGGGBBB -> not Baseline TIFF */
+	default: printf("bad planarconfig\n"); break; }
+
+/* カラーか白黒か、白黒ならピクセル値の意味 : 0は黒か白か */
+TIFFGetField( &tiff_head, TIFFTAG_PHOTOMETRIC, &uint16 );
+	switch (uint16) {
+	/* photometricが単チャンネル(bw(1b),grayscale(8,16b))の場合 */
+	case PHOTOMETRIC_MINISWHITE: /* =0 0=白,1=黒 ps8.0.1 */
+	case PHOTOMETRIC_MINISBLACK: /* =1 0=黒,1=白 monitor */
+	/* photometricが複数チャンネル(rgb,rgba,rgb16b,rgba16b)の場合 */
+	case PHOTOMETRIC_RGB:        /* =3 */
+		break;
+	default: printf("bad photometric"); break;
+	}
+
+/* 画像バイト中のビットの埋め込み順 : MSBが最初かLSBが最初か */
+TIFFGetField( &tiff_head, TIFFTAG_FILLORDER, &uint16 );
+	switch (uint16) {
+	case FILLORDER_MSB2LSB: /* =1 most significant->least default */
+	case FILLORDER_LSB2MSB: /* =2 least significant->most */
+	}
+
+/*--------------------------------------------------------*/
+/* TIFF file状態情報 */
+
+/* File圧縮(保存へ引き継ぐ場合?) */
+TIFFGetField( &tiff_head, TIFFTAG_COMPRESSION, &uint16 );
+	switch (uint16) {
+	case COMPRESSION_NONE:      /* =1 default */
+	case COMPRESSION_CCITTRLE:  /* =2 BWのみ有効 */
+	case COMPRESSION_CCITTFAX3: /* =3 BWのみ有効 */
+	case COMPRESSION_CCITTFAX4: /* =4 BWのみ有効 */
+	case COMPRESSION_LZW:       /* =5 */
+	case COMPRESSION_PACKBITS:  /* =32773 Macintosh RLE */
+	case COMPRESSION_DEFLATE:   /* =32946 zip,gzip,PNG等で使用
+				お薦めだがlibtiff-v3.5.7では使えない */
+	default: printf("bad compression"); break;
+	}
+
+/* File圧縮補助情報(保存へ引き継ぐ場合?) */
+TIFFGetField( &tiff_head, TIFFTAG_PREDICTOR, &uint16 );
+
+/*--------------------------------------------------------*/

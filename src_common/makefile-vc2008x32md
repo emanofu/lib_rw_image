@@ -1,0 +1,118 @@
+.SUFFIXES: .obj .cxx
+# Need to setup 'Microsoft Visual Studio 2008(9.0)  C/C++ 15.00.21022.08'
+# call "C:\Program Files\Microsoft Visual Studio 9.0\Common7\Tools\vsvars32.bat"
+# dumpbin /exports xxxxx.dll
+# dumpbin /dependents xxxxx.dll
+# Caution : Must Not Set "LIB" or "INCLUDE" parameter with MS-C
+#---name-----------------------------------------------------
+COMPILE_TYPE = vc2008x32md
+INC_RSRC =    igs_resource_irw.h
+LIB_RSRC = libigs_resource_irw.lib
+DLL_RSRC =    igs_resource_irw.dll
+IMP_RSRC = libigs_resource_irw_imp.lib
+EXP_RSRC = libigs_resource_irw_imp.exp
+INC_PATH =    igs_path_irw.h
+LIB_PATH = libigs_path_irw.lib
+DLL_PATH =    igs_path_irw.dll
+IMP_PATH = libigs_path_irw_imp.lib
+EXP_PATH = libigs_path_irw_imp.exp
+INC_IMAG =    igs_image_irw.h
+LIB_IMAG = libigs_image_irw.lib
+DLL_IMAG =    igs_image_irw.dll
+IMP_IMAG = libigs_image_irw_imp.lib
+EXP_IMAG = libigs_image_irw_imp.exp
+SRCS_RSRC =\
+igs_resource_cpu_endian.cxx\
+igs_resource_dir_list.cxx\
+igs_resource_file_stat.cxx\
+igs_resource_ifbinary.cxx\
+igs_resource_ofbinary.cxx\
+igs_resource_plugin.cxx\
+igs_resource_stop_watch.cxx
+SRCS_PATH =\
+igs_path_irw.cxx
+SRCS_IMAG =\
+igs_image_irw.cxx
+OBJS_RSRC = $(SRCS_RSRC:.cxx=.obj)
+OBJS_PATH = $(SRCS_PATH:.cxx=.obj)
+OBJS_IMAG = $(SRCS_IMAG:.cxx=.obj)
+#DPATH_UTIL = ..\..\..\utility_tools\$(COMPILE_TYPE)
+DPATH_UTIL = %HOMEDRIVE%%%HOMEPATH%\utility_tools\$(COMPILE_TYPE)
+DPATH_INCL = $(DPATH_UTIL)\include
+DPATH_LIBR = $(DPATH_UTIL)\lib
+DPATH_DLL  = $(DPATH_UTIL)\dll
+DPATH_IMPO = $(DPATH_UTIL)\implib
+INCS = /I. /I..\..\l01log\src /I$(DPATH_INCL)
+IMPO_LIBS =
+#---command--------------------------------------------------
+CC = cl
+MT = mt
+CC_OPTIONS = $(CXXFLAGS) /W4 /MD /EHa /O2 /wd4819 $(INCS)
+# /wd4819 : Stop warning message by EUC-JP Code in comment
+LD = cl
+RSRC_LD_OPTIONS = $(LDFLAGS) $(CC_OPTIONS) /LD /DIGS_RESOURCE_IRW_EXPORT="__declspec(dllexport)"
+PATH_LD_OPTIONS = $(LDFLAGS) $(CC_OPTIONS) /LD /DIGS_PATH_IRW_EXPORT="__declspec(dllexport)"
+IMAG_LD_OPTIONS = $(LDFLAGS) $(CC_OPTIONS) /LD /DIGS_IMAGE_IRW_EXPORT="__declspec(dllexport)"
+# /LD     : create xxxxx.dll(not .exe)
+# /DIGS_xxx_EXPORT="__declspec(dllexport)"  : export
+#---action---------------------------------------------------
+all: cleanobj $(LIB_RSRC) $(LIB_PATH) $(LIB_IMAG) $(DLL_RSRC) $(DLL_PATH) $(DLL_IMAG)
+cleanobj:
+	del $(OBJS_RSRC) $(DLL_RSRC).manifest $(EXP_RSRC)
+	del $(OBJS_PATH) $(DLL_PATH).manifest $(EXP_PATH)
+	del $(OBJS_IMAG) $(DLL_IMAG).manifest $(EXP_IMAG)
+$(LIB_RSRC): $(OBJS_RSRC)
+	lib /out:$@ $?
+	del $(OBJS_RSRC)
+$(LIB_PATH): $(OBJS_PATH)
+	lib /out:$@ $?
+	del $(OBJS_PATH)
+$(LIB_IMAG): $(OBJS_IMAG)
+	lib /out:$@ $?
+	del $(OBJS_IMAG)
+$(DLL_RSRC): $(SRCS_RSRC)
+	$(LD) $(RSRC_LD_OPTIONS) /Fe$@ $? $(IMPO_LIBS) /link /implib:$(IMP_RSRC)
+	$(MT) -manifest $(DLL_RSRC).manifest -outputresource:$(DLL_RSRC);2
+	del $(OBJS_RSRC) $(DLL_RSRC).manifest $(EXP_RSRC)
+$(DLL_PATH): $(SRCS_PATH)
+	$(LD) $(PATH_LD_OPTIONS) /Fe$@ $? $(IMPO_LIBS) /link /implib:$(IMP_PATH)
+	$(MT) -manifest $(DLL_PATH).manifest -outputresource:$(DLL_PATH);2
+	del $(OBJS_PATH) $(DLL_PATH).manifest $(EXP_PATH)
+$(DLL_IMAG): $(SRCS_IMAG)
+	$(LD) $(IMAG_LD_OPTIONS) /Fe$@ $? $(IMPO_LIBS) /link /implib:$(IMP_IMAG)
+	$(MT) -manifest $(DLL_IMAG).manifest -outputresource:$(DLL_IMAG);2
+	del $(OBJS_IMAG) $(DLL_IMAG).manifest $(EXP_IMAG)
+.cxx.obj:
+	$(CC) $(CC_OPTIONS) /c $<
+inst:
+	@echo "Gather $(INC_RSRC) code"
+	if exist $(INC_RSRC) (del $(INC_RSRC))
+	type igs_resource_cpu_endian.h	> $(INC_RSRC)
+	type igs_resource_dir_list.h	>> $(INC_RSRC)
+	type igs_resource_etc.h	>> $(INC_RSRC)
+	type igs_resource_file_stat.h	>> $(INC_RSRC)
+	type igs_resource_ifbinary.h	>> $(INC_RSRC)
+	type igs_resource_ofbinary.h	>> $(INC_RSRC)
+	type igs_resource_plugin.h	>> $(INC_RSRC)
+	type igs_resource_stop_watch.h	>> $(INC_RSRC)
+	if not exist $(DPATH_UTIL) (mkdir $(DPATH_UTIL))
+	if not exist $(DPATH_INCL) (mkdir $(DPATH_INCL))
+	move $(INC_RSRC) $(DPATH_INCL)
+	copy /v /y /b $(INC_PATH) $(DPATH_INCL)
+	copy /v /y /b $(INC_IMAG) $(DPATH_INCL)
+	if not exist $(DPATH_LIBR) (mkdir $(DPATH_LIBR))
+	move $(LIB_RSRC) $(DPATH_LIBR)
+	move $(LIB_PATH) $(DPATH_LIBR)
+	move $(LIB_IMAG) $(DPATH_LIBR)
+	if not exist $(DPATH_DLL) (mkdir $(DPATH_DLL))
+	move $(DLL_RSRC) $(DPATH_DLL)
+	move $(DLL_PATH) $(DPATH_DLL)
+	move $(DLL_IMAG) $(DPATH_DLL)
+	if not exist $(DPATH_IMPO) (mkdir $(DPATH_IMPO))
+	move $(IMP_RSRC) $(DPATH_IMPO)
+	move $(IMP_PATH) $(DPATH_IMPO)
+	move $(IMP_IMAG) $(DPATH_IMPO)
+clean:
+	del $(OBJS_RSRC) $(LIB_RSRC) $(IMP_RSRC) $(DLL_RSRC) $(DLL_RSRC).manifest $(EXP_RSRC)
+	del $(OBJS_PATH) $(LIB_PATH) $(IMP_PATH) $(DLL_PATH) $(DLL_PATH).manifest $(EXP_PATH)
+	del $(OBJS_IMAG) $(LIB_IMAG) $(IMP_IMAG) $(DLL_IMAG) $(DLL_IMAG).manifest $(EXP_IMAG)

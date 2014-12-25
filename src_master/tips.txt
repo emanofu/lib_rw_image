@@ -1,0 +1,26 @@
+-where l02image_rw/src_file_master
+
+-tips 01  2008-10-24  std::ifstreamのエラーチェック
+> 確認プログラムここから
+#include <iostream>
+#include <stdexcept>
+#include <fstream>
+int main(void)
+{
+ try {
+	std::ifstream ifs("tmp",std::ios::binary); // no throw
+	if (!ifs) { throw std::domain_error("open error"); }
+	char tag_array[3];
+	ifs.read(tag_array,sizeof(tag_array)); // no throw
+	if (!ifs) { throw std::domain_error("read error"); }
+	ifs.close();
+	if (!ifs) { throw std::domain_error("close error"); }
+ }
+ catch(std::exception& e) {
+	std::cerr << "exception <" << e.what() << ">" << std::endl;
+ }
+ catch (...) {
+	std::cerr << "other exception" << std::endl;
+ }
+}
+< 確認プログラムここまで

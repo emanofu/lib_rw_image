@@ -1,0 +1,100 @@
+.SUFFIXES: .o .cxx
+# コンピュータシステム情報(uname)
+#	-r	OS release		: 8.7.0
+# C++コンパイラ情報(man gcc)
+#	path	: g++
+#	version	: 4.0.0
+# ライブラリ情報を見る方法
+#	ar -tv lib.a	: アーカイブ内のファイルリスト
+#	nm lib.a	: シンボルテーブルのリスト
+#---name-----------------------------------------------------
+COMPILE_TYPE = darwin8
+INC_RSRC =    igs_resource_irw.h
+LIB_RSRC = libigs_resource_irw.a
+SOB_RSRC   = libigs_resource_irw.so
+INC_PATH =    igs_path_irw.h
+LIB_PATH = libigs_path_irw.a
+SOB_PATH   = libigs_path_irw.so
+INC_IMAG =    igs_image_irw.h
+LIB_IMAG = libigs_image_irw.a
+SOB_IMAG   = libigs_image_irw.so
+SRCS_RSRC =\
+igs_resource_cpu_endian.cxx\
+igs_resource_dir_list.cxx\
+igs_resource_file_stat.cxx\
+igs_resource_ifbinary.cxx\
+igs_resource_ofbinary.cxx\
+igs_resource_plugin.cxx\
+igs_resource_stop_watch.cxx
+SRCS_PATH =\
+igs_path_irw.cxx
+SRCS_IMAG =\
+igs_image_irw.cxx
+OBJS_RSRC = $(SRCS_RSRC:.cxx=.o)
+OBJS_PATH = $(SRCS_PATH:.cxx=.o)
+OBJS_IMAG = $(SRCS_IMAG:.cxx=.o)
+#DPATH_UTIL = ../../../utility_tools/$(COMPILE_TYPE)
+DPATH_UTIL = ${HOME}/utility_tools/$(COMPILE_TYPE)
+DPATH_INCL = $(DPATH_UTIL)/include
+DPATH_LIBR = $(DPATH_UTIL)/lib
+DPATH_SO   = $(DPATH_UTIL)/so
+INCS = -I. -I../../l01log/src -I$(DPATH_INCL)
+#---command--------------------------------------------------
+CC = g++
+CC_OPTIONS = $(CXXFLAGS) -Wall -O2 -g $(INCS)
+# -fPIC : 位置独立コードを生成する-->使っていない.
+AR = ar
+AR_OPTIONS = -rvs
+# -s : オブジェクトファイルの索引を書き込むか更新する。ranlibと同じ.
+LD = g++
+# "ld"だと__dso_handleがないといってエラーになる.
+LD_OPTIONS = $(LDFLAGS) $(CC_OPTIONS) -shared
+# -shared : 共有オブジェクトを生成.
+#---action---------------------------------------------------
+all: check $(LIB_RSRC) $(LIB_PATH) $(LIB_IMAG) cleanobj
+check:
+	if [ `uname -s` != "Darwin" ] ; then echo "Bad makefile"; exit 1; fi
+$(LIB_RSRC): $(OBJS_RSRC)
+	$(AR) $(AR_OPTIONS) $@ $?
+$(LIB_PATH): $(OBJS_PATH)
+	$(AR) $(AR_OPTIONS) $@ $?
+$(LIB_IMAG): $(OBJS_IMAG)
+	$(AR) $(AR_OPTIONS) $@ $?
+#$(SOB_RSRC): $(OBJS_RSRC)
+#	$(LD) $(LD_OPTIONS) $? -o $@
+#$(SOB_PATH): $(OBJS_PATH)
+#	$(LD) $(LD_OPTIONS) $? -o $@
+#$(SOB_IMAG): $(OBJS_IMAG)
+#	$(LD) $(LD_OPTIONS) $? -o $@
+cleanobj:
+	rm -f $(OBJS_RSRC) $(OBJS_PATH) $(OBJS_IMAG)
+.cxx.o:
+	$(CC) $(CC_OPTIONS) -c $<
+inst: check
+	@echo "Gather $(INC_RSRC) code"
+	if [ -e $(INC_RSRC) ] ; then rm $(INC_RSRC); fi
+	cat igs_resource_cpu_endian.h	> $(INC_RSRC)
+	cat igs_resource_dir_list.h	>> $(INC_RSRC)
+	cat igs_resource_etc.h	>> $(INC_RSRC)
+	cat igs_resource_file_stat.h	>> $(INC_RSRC)
+	cat igs_resource_ifbinary.h	>> $(INC_RSRC)
+	cat igs_resource_ofbinary.h	>> $(INC_RSRC)
+	cat igs_resource_plugin.h	>> $(INC_RSRC)
+	cat igs_resource_stop_watch.h	>> $(INC_RSRC)
+	if [ ! -e $(DPATH_UTIL) ] ; then mkdir $(DPATH_UTIL) ; fi
+	if [ ! -e $(DPATH_INCL) ] ; then mkdir $(DPATH_INCL) ; fi
+	mv $(INC_RSRC) $(DPATH_INCL)
+	cp $(INC_PATH) $(DPATH_INCL)
+	cp $(INC_IMAG) $(DPATH_INCL)
+	if [ ! -e  $(DPATH_LIBR) ] ; then mkdir $(DPATH_LIBR) ; fi
+	mv $(LIB_RSRC) $(DPATH_LIBR)
+	mv $(LIB_PATH) $(DPATH_LIBR)
+	mv $(LIB_IMAG) $(DPATH_LIBR)
+#	if [ ! -e $(DPATH_SO) ] ; then mkdir $(DPATH_SO) ; fi
+#	mv $(SOB_RSRC) $(DPATH_SO)
+#	mv $(SOB_PATH) $(DPATH_SO)
+#	mv $(SOB_IMAG) $(DPATH_SO)
+clean: check
+	rm -f $(OBJS_RSRC) $(LIB_RSRC) $(SOB_RSRC)
+	rm -f $(OBJS_PATH) $(LIB_PATH) $(SOB_PATH)
+	rm -f $(OBJS_IMAG) $(LIB_IMAG) $(SOB_IMAG)

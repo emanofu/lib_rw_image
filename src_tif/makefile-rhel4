@@ -1,0 +1,95 @@
+.SUFFIXES: .o .cxx
+# コンピュータシステム情報(uname)
+#	-s	OS の名称	: Linux
+# C++コンパイラ情報(man gcc)
+#	path	: g++
+#	version	: (GCC)3.4.6
+# ライブラリ情報を見る方法
+#	ar -tv lib.a	: アーカイブ内のファイルリスト
+#	nm -s lib.a	: シンボルインデックスのリスト('ar -s'が必要)
+#	ldd lib.so	: 共有ライブラリへの依存関係を表示
+#---name-----------------------------------------------------
+COMPILE_TYPE = rhel4
+FORMAT = tif
+READ_INCL =    igs_$(FORMAT)_reader.h
+WRIT_INCL =    igs_$(FORMAT)_writer.h
+READ_LIBR = libigs_$(FORMAT)_reader.a
+WRIT_LIBR = libigs_$(FORMAT)_writer.a
+READ_SO   = libigs_$(FORMAT)_reader.so
+WRIT_SO   = libigs_$(FORMAT)_writer.so
+READ_SRCS =\
+igs_image_function_invert.cxx\
+igs_tif_error.cxx\
+igs_tif_info.cxx\
+igs_tif_read_handle.cxx\
+igs_tif_read_strip.cxx\
+igs_tif_read_tile.cxx\
+igs_tif_reader.cxx
+WRIT_SRCS =\
+igs_tif_error.cxx\
+igs_tif_write_handle.cxx\
+igs_tif_write_strip.cxx\
+igs_tif_writer.cxx
+READ_OBJS = $(READ_SRCS:.cxx=.o)
+WRIT_OBJS = $(WRIT_SRCS:.cxx=.o)
+READ_PLUG_OBJ = igs_tif_reader_plugin.o
+WRIT_PLUG_OBJ = igs_tif_writer_plugin.o
+#DPATH_UTIL = ../../../utility_tools/$(COMPILE_TYPE)
+DPATH_UTIL = ${HOME}/utility_tools/$(COMPILE_TYPE)
+DPATH_INCL = $(DPATH_UTIL)/include
+DPATH_LIBR = $(DPATH_UTIL)/lib
+DPATH_SO  = $(DPATH_UTIL)/so
+DPATH_PLUG = $(DPATH_UTIL)/plugin
+DPATH_IMAG = $(DPATH_PLUG)/image
+DPATH_OPEN = $(DPATH_IMAG)/open
+DPATH_SAVE = $(DPATH_IMAG)/save
+DIR_TIFF = tiff-3.9.4
+#DIR_TIFF = tiff-v3.5.7
+INCS = -I. -I../src_common -I$(DPATH_INCL) -I$(DPATH_UTIL)/$(DIR_TIFF)/include
+SOS =\
+$(DPATH_SO)/libigs_image_irw.so\
+$(DPATH_SO)/libigs_resource_irw.so
+#---command--------------------------------------------------
+CC = g++
+CC_OPTIONS = $(CXXFLAGS) -Wall -O2 -g $(INCS)
+AR = ar
+AR_OPTIONS = -rvs
+# -s : オブジェクトファイルの索引を書き込むか更新する。ranlibと同じ.
+LD = g++
+# "ld"だと__dso_handleがないといってエラーになる.
+LD_OPTIONS = $(LDFLAGS) $(CC_OPTIONS) -shared $(SOS)
+# -fPIC : 位置独立コードを生成する-->使っていない.
+# -shared : 共有オブジェクトを生成.
+#---action---------------------------------------------------
+all: check $(READ_LIBR) $(WRIT_LIBR) $(READ_SO) $(WRIT_SO) cleanobj
+check:
+	if [ `uname -s` != "Linux" ] ; then echo "Bad makefile"; exit 1; fi
+$(READ_LIBR): $(READ_OBJS)
+	$(AR) $(AR_OPTIONS) $@ $?
+$(WRIT_LIBR): $(WRIT_OBJS)
+	$(AR) $(AR_OPTIONS) $@ $?
+$(READ_SO): $(READ_OBJS) $(READ_PLUG_OBJ)
+	$(LD) $(LD_OPTIONS) $? -o $@
+$(WRIT_SO): $(WRIT_OBJS) $(WRIT_PLUG_OBJ)
+	$(LD) $(LD_OPTIONS) $? -o $@
+cleanobj:
+	rm -f $(READ_OBJS) $(WRIT_OBJS) $(READ_PLUG_OBJ) $(WRIT_PLUG_OBJ)
+.cxx.o:
+	$(CC) $(CC_OPTIONS) -c $<
+inst: check
+	if [ ! -e $(DPATH_UTIL) ] ; then mkdir $(DPATH_UTIL) ; fi
+	if [ ! -e $(DPATH_INCL) ] ; then mkdir $(DPATH_INCL) ; fi
+	cp $(READ_INCL) $(DPATH_INCL)
+	cp $(WRIT_INCL) $(DPATH_INCL)
+	if [ ! -e $(DPATH_LIBR) ] ; then mkdir $(DPATH_LIBR) ; fi
+	mv $(READ_LIBR) $(DPATH_LIBR)
+	mv $(WRIT_LIBR) $(DPATH_LIBR)
+	if [ ! -e $(DPATH_PLUG) ] ; then mkdir $(DPATH_PLUG) ; fi
+	if [ ! -e $(DPATH_IMAG) ] ; then mkdir $(DPATH_IMAG) ; fi
+	if [ ! -e $(DPATH_OPEN) ] ; then mkdir $(DPATH_OPEN) ; fi
+	mv $(READ_SO) $(DPATH_OPEN)/$(FORMAT).so
+	if [ ! -e $(DPATH_SAVE) ] ; then mkdir $(DPATH_SAVE) ; fi
+	mv $(WRIT_SO) $(DPATH_SAVE)/$(FORMAT).so
+clean: check
+	rm -f $(READ_OBJS) $(WRIT_OBJS) $(READ_PLUG_OBJ) $(WRIT_PLUG_OBJ)
+	rm -f $(READ_LIBR) $(WRIT_LIBR) $(READ_SO) $(WRIT_SO)

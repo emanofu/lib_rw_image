@@ -1,0 +1,41 @@
+#ifndef tif_write_scanline_h
+#define tif_write_scanline_h
+
+#include "tif_write_handle.h"
+
+namespace igs {
+ namespace tif {
+  class write_scanline {
+  public:
+	write_scanline(
+		igs::tif::write_handle& cl_w_handle,
+		const unsigned int u_bytes_sl_size,
+		const unsigned int u_he,
+		const unsigned int u_mem_size,
+		unsigned char *ucharp_top
+	);
+	write_scanline(); /* コンポーネントとして使う時使用 */
+
+	void v_begin(     /* コンポーネントとして使う時使用 */
+		igs::tif::write_handle& cl_w_handle,
+		const unsigned int u_bytes_sl_size,
+		const unsigned int u_he,
+		const unsigned int u_mem_size,
+		unsigned char *ucharp_top
+	); /* 処理全体の初期設定 */
+	unsigned int u_count(void) const; /* v_segment()呼出べき回数 */
+	void v_segment(
+		igs::tif::write_handle& cl_w_handle
+	); /* 分割した部分処理(呼出毎順次処理) */
+  private:
+	unsigned int	_u_bytes_sl_size,
+			_u_h,
+			_u_y,
+			_u_mem_size;
+	unsigned char *_ucharp_current_image;
+	unsigned int _u_write_total_size;
+  };
+ }
+}
+
+#endif /* !tif_write_scanline_h */

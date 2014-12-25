@@ -1,0 +1,81 @@
+.SUFFIXES: .obj .cxx
+# Need to setup 'Microsoft Visual Studio 2008(9.0)  C/C++ 15.00.21022.08'
+# call "C:\Program Files\Microsoft Visual Studio 9.0\Common7\Tools\vsvars32.bat"
+# dumpbin /exports xxxxx.dll
+# dumpbin /dependents xxxxx.dll
+# Caution : Must Not Set "LIB" or "INCLUDE" parameter with MS-C
+#---name-----------------------------------------------------
+COMPILE_TYPE = vc2008x32md
+READ_INCL =    igs_image_readers.h
+READ_LIBR = libigs_image_readers.lib
+READ_DLL  =    igs_image_readers.dll
+READ_IMPO = libigs_image_readers_imp.lib
+READ_EXP  = libigs_image_readers_imp.exp
+WRIT_INCL =    igs_image_writers.h
+WRIT_LIBR = libigs_image_writers.lib
+WRIT_DLL  =    igs_image_writers.dll
+WRIT_IMPO = libigs_image_writers_imp.lib
+WRIT_EXP  = libigs_image_writers_imp.exp
+READ_SRCS =    igs_image_readers.cxx
+WRIT_SRCS =    igs_image_writers.cxx
+READ_OBJS = $(READ_SRCS:.cxx=.obj)
+WRIT_OBJS = $(WRIT_SRCS:.cxx=.obj)
+#DPATH_UTIL = ..\..\..\utility_tools\$(COMPILE_TYPE)
+DPATH_UTIL = %HOMEDRIVE%%%HOMEPATH%\utility_tools\$(COMPILE_TYPE)
+DPATH_INCL = $(DPATH_UTIL)\include
+DPATH_LIBR = $(DPATH_UTIL)\lib
+DPATH_DLL = $(DPATH_UTIL)\dll
+DPATH_IMPO = $(DPATH_UTIL)\implib
+INCS = /I. /I..\src_common /I$(DPATH_INCL)
+LIBS =\
+$(DPATH_UTIL)\implib\libigs_resource_irw_imp.lib\
+$(DPATH_UTIL)\implib\libigs_path_irw_imp.lib
+#msvcprt.lib msvcrt.lib oldnames.lib uuid.lib kernel32.lib
+#---command--------------------------------------------------
+CC = cl
+MT = mt
+CC_OPTIONS = $(CXXFLAGS) /W3 /MD /EHa /O2 /wd4819 $(INCS)
+# /wd4819 : Stop warning message by EUC-JP Code in comment
+LD = cl
+LD_OPTIONS_RDS = $(LDFLAGS) $(CC_OPTIONS) /LD /DIGS_IMAGE_READERS_EXPORT="__declspec(dllexport)"
+LD_OPTIONS_WTS = $(LDFLAGS) $(CC_OPTIONS) /LD /DIGS_IMAGE_WRITERS_EXPORT="__declspec(dllexport)"
+# /LD     : create xxxxx.dll(not .exe)
+# /DIGS_xxx_EXPORT="__declspec(dllexport)"  : export
+#---action---------------------------------------------------
+all: $(READ_LIBR) $(WRIT_LIBR) $(READ_DLL) $(WRIT_DLL) cleanobj
+$(READ_LIBR): $(READ_OBJS)
+	lib /out:$@ $?
+	del $(READ_OBJS)
+$(WRIT_LIBR): $(WRIT_OBJS)
+	lib /out:$@ $?
+	del $(WRIT_OBJS)
+$(READ_DLL): $(READ_SRCS)
+	$(LD) $(LD_OPTIONS_RDS) /DUSE_IRW_PLUGIN /Fe$@ $? $(LIBS) /link /implib:$(READ_IMPO)
+	$(MT) -manifest $(READ_DLL).manifest -outputresource:$(READ_DLL);2
+	del $(READ_OBJS) $(READ_DLL).manifest $(READ_EXP)
+$(WRIT_DLL): $(WRIT_SRCS)
+	$(LD) $(LD_OPTIONS_WTS) /DUSE_IRW_PLUGIN /Fe$@ $? $(LIBS) /link /implib:$(WRIT_IMPO)
+	$(MT) -manifest $(WRIT_DLL).manifest -outputresource:$(WRIT_DLL);2
+	del $(WRIT_OBJS) $(WRIT_DLL).manifest $(WRIT_EXP)
+cleanobj:
+	del $(READ_OBJS) $(READ_DLL).manifest $(READ_EXP)
+	del $(WRIT_OBJS) $(WRIT_DLL).manifest $(WRIT_EXP)
+.cxx.obj:
+	$(CC) $(CC_OPTIONS) /c $<
+inst:
+	if not exist $(DPATH_UTIL) (mkdir $(DPATH_UTIL))
+	if not exist $(DPATH_INCL) (mkdir $(DPATH_INCL))
+	copy /v /y /b $(READ_INCL) $(DPATH_INCL)
+	copy /v /y /b $(WRIT_INCL) $(DPATH_INCL)
+	if not exist $(DPATH_LIBR) (mkdir $(DPATH_LIBR))
+	move $(READ_LIBR) $(DPATH_LIBR)
+	move $(WRIT_LIBR) $(DPATH_LIBR)
+	if not exist $(DPATH_DLL) (mkdir $(DPATH_DLL))
+	move $(READ_DLL) $(DPATH_DLL)
+	move $(WRIT_DLL) $(DPATH_DLL)
+	if not exist $(DPATH_IMPO) (mkdir $(DPATH_IMPO))
+	move $(READ_IMPO) $(DPATH_IMPO)
+	move $(WRIT_IMPO) $(DPATH_IMPO)
+clean:
+	del $(READ_OBJS) $(READ_DLL).manifest $(READ_EXP) $(READ_LIBR) $(READ_DLL) $(READ_IMPO)
+	del $(WRIT_OBJS) $(WRIT_DLL).manifest $(WRIT_EXP) $(WRIT_LIBR) $(WRIT_DLL) $(WRIT_IMPO)

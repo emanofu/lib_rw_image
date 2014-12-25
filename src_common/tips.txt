@@ -1,0 +1,247 @@
+-where l02irw/src_common
+
+-tips 01  2007-12-14  std::vectorとnewとのスピード比較方法
+> 確認プログラムここから
+#include <iostream>
+#include <iomanip>
+#include <vector>
+#include "igs_portable_resource_ima.h" // portable::time::stop_watch
+int main(void)
+{
+	const unsigned int u_wi = 5669, u_he = 4679, u_ch = 3, u_by = 1;
+	const unsigned int u_size = u_wi * u_he * u_ch * u_by;
+	portable::time::stop_watch cl_stopw;
+	std::cout
+		<< u_wi << 'x' << u_he << ','
+		<< u_ch << "ch/pixel," << u_by << "bytes/ch = "
+		<< u_size << "bytes" << std::endl;
+
+	std::cout << "test01  std::vector<unsigned char> std_vec_a(-)\n";
+	cl_stopw.start();
+	std::vector<unsigned char> std_vec_a(u_size);
+	cl_stopw.stop("std_vec_a(-) constractor");
+	cl_stopw.start();
+	unsigned char *ucharp_a = &std_vec_a[0];
+	for (unsigned int ii=0;ii<u_size;++ii) {ucharp_a[ii] = 0;}
+	cl_stopw.stop("std_vec_a(-) all array zero");
+	cl_stopw.start();
+	std_vec_a.clear();
+	cl_stopw.stop("std_vec_a(-) clear");
+
+	std::cout << "test02  std::vector<unsigned char> std_vec\n";
+	cl_stopw.start();
+	std::vector<unsigned char> std_vec;
+	cl_stopw.stop("std_vec constractor");
+	cl_stopw.start();
+	std_vec.reserve(u_size);
+	cl_stopw.stop("std_vec reserve");
+	cl_stopw.start();
+	std_vec.resize(u_size);
+		/* windowsではresize()しないとucharp[ii]=0で落ちる */
+	cl_stopw.stop("std_vec resize");
+	cl_stopw.start();
+	unsigned char *ucharp = &std_vec[0];
+	for (unsigned int ii=0;ii<u_size;++ii) {ucharp[ii] = 0;}
+	cl_stopw.stop("std_vec all array zero");
+	cl_stopw.start();
+	std_vec.clear();
+	cl_stopw.stop("std_vec clear");
+
+	std::cout << "test03  new unsigned char[-]\n";
+	cl_stopw.start();
+	unsigned char *ucp = new unsigned char[u_size];
+	cl_stopw.stop("new unsigned char[u_size]");
+	cl_stopw.start();
+	for (unsigned int ii=0;ii<u_size;++ii) {ucp[ii] = 0;}
+	cl_stopw.stop("loop set to all zero");
+	cl_stopw.start();
+	delete [] ucp;
+	cl_stopw.stop("delete");
+
+	return 0;
+}
+< 確認プログラムここまで
+コンパイル方法は
+g++ test.cxx -I${HOME}/utility_tools/rhel4/include ${HOME}/utility_tools/rhel4/lib/libigs_resource_irw_common.a
+> rhel4にての結果ここから
+5669x4679,3ch/pixel,1bytes/ch = 79575753bytes
+test01  vector<unsigned char>
+std::vector<unsigned char> std_vec
+                8.77772e-08sec
+reserve
+                -7.82311e-08sec
+push_back all
+                1.884sec
+clear
+                9.73232e-08sec
+test02  new unsigned char[-]
+new unsigned char[u_size]
+                9.73232e-08sec
+loop set to all zero
+                0.327sec
+delete
+                0.00799996sec
+< rhel4にての結果ここまで
+
+-tips 02  2007-12-14  指定bit数(32)から表現可能な最大値を計算する方法
+bitwidthが32のとき、(1<<bitwidth)-1だと、オーバーフローして計算できない
+そこで、bitwidthが32でもオーバーフローしない計算方法
+1. ビット数を一つ減らして最大値を求める
+  ((1U<<(bitwidth-1U))-1U)          = 0x7fffffff = 2147483647
+2. さらに左に一つシフトし、1を足す
+((((1U<<(bitwidth-1U))-1U)<<1U)+1U) = 0xffffffff = 4294967295
+
+-tips 03  2008-04-17  doubleの10進数の最大精度
+> 確認プログラムここから
+#include <limits>
+#include <iostream>
+int main(void) {
+	std::cout.precision(std::numeric_limits<double>::digits10);
+	std::cout
+		<< "double digits10 is "
+		<< std::numeric_limits<double>::digits10 << '\n'
+		<< 1.23456789012345678901234567890 << "\n"
+		<< 12345678901234567890123456789.0 << "\n"
+		<< 10000000000000.0 << "\n"
+		<< 100000000000000.0 << "\n"
+		<< 1000000000000000.0 << "\n"
+		<< 10000000000000000.0 << "\n"
+		<< 0.001 << "\n"
+		<< 0.0001 << "\n"
+		<< 0.00001 << "\n"
+		<< 0.000001 << "\n"
+		;
+	return 0;
+}
+< 確認プログラムここまで
+> rhel4にての結果ここから
+/*
+double digits10 is 15
+1.23456789012346
+1.23456789012346e+28
+10000000000000
+100000000000000
+1e+15
+1e+16
+0.001
+0.0001
+1e-05
+1e-06
+< rhel4にての結果ここまで
+
+-tips 04  2008-04-21  windowsで"interface"という名前は使用不可?!
+> 確認プログラムここから
+#include <windows.h>
+namespace image {
+ namespace interface {} // error
+ void interface(void);  // error
+}
+< 確認プログラムここまで
+> vc2005(cl v14.00.50727.762)にての結果ここから
+namespace interface {} --> error C2059: 構文エラー : '<クラスヘッド>'
+void interface(void);  --> error C2332: 'struct' : タグ名がありません
+> vc2005(cl v14.00.50727.762)にての結果ここまで
+> vc6.0(cl v12.00.8804)にての結果ここから
+namespace interface {} --> error C2059: 構文ｴﾗｰ : '<class-head>'
+void interface(void);  --> error C2236: 予期しない 'struct' '$S1' です。
+> vc6.0(cl v12.00.8804)にての結果ここまで
+
+-tips 05  2008-04-21  smart pointer classの作り方(stack編)
+> サンプルプログラムここから
+#include <cstdio> /* fopen(-),fget(-),fputc(-),fclose(-) */
+#include <iostream> /* std::cerr */
+class smart_ptr { /* staticな使い方はできない */
+public:
+	smart_ptr( const char *path, const char *mode ): p_(0)
+	{ this->p_ = ::fopen(path,mode); }
+	~smart_ptr()
+	{ if (0 != this->p_) { ::fclose(this->p_); } }
+	operator FILE*() { return this->p_; }
+private:
+	smart_ptr(); /* コンパイラの自動生成を止める */
+	FILE *p_;
+};
+int main(int argc, char *argv[])
+{
+	smart_ptr re(argv[1],"r");
+	smart_ptr wr(argv[2],"w");
+	if (0==re) {std::cerr << argv[1] << " not r open\n";return 1;}
+	if (0==wr) {std::cerr << argv[2] << " not w open\n";return 1;}
+	int cc;
+	while (EOF != (cc = ::fgetc(re))) { ::fputc(cc,wr); }
+	return 0;
+}
+< サンプルプログラムここまで
+
+-tips 06  2008-04-25  for初期設定式で複数指定したときのありがちな間違い
+for()ループの初期設定式に、二つ以上の式で変数の定義含めて指定するとだめ
+その1 二つの式で二つの定義はだめ
+for (std::string str = "tmp",int ii=0; ii<1; ++ii) {}
+--> error: expected unqualified-id が "int" の前にあります(g++ 3.4.6)
+その1 二つの式で一つの定義はだめ
+int ii; for (std::string str = "tmp",ii=0; ii<1; ++ii) {}
+--> error: no match for 'operator<' in 'ii < 1'(g++ 3.4.6)
+>>>解決方法
+その1 初期設定式は一つ(単数)で行なう
+int ii=0; for (std::string str = "tmp"; ii<1; ++ii) {}
+その2 変数定義はすべてforループの外で行なう
+int ii; std::string str; for (str = "tmp",ii=0; ii<1; ++ii) {}
+
+-tips 07  2008-04-25  std::vectorは独自classの型で使うと問題あり
+std::vector<igs::portable::file::dynamic_library> dla;として、
+dla.push_back(fpath);や、
+dla.resize(dls.size()+1)を使うと正常動作しない。
+なお、まとめてresize(-)し、at(-)で使うと動作する
+原因は不明、今後考察必要
+
+-tips 08  2008-05-17  classのdestractorから例外を投げてはいけない
+終了処理は自前のメンバー関数で行なうこと
+エラー終了のときのデストラクタでの終了処理では、
+例外をcatchし飲み込む(無効化する)
+
+-tips 09  2008-05-26  ファイル内局所関数名と、他関数名との区別方法
+> 確認プログラムここから
+#include <cstdio> /* ::getenv() */
+#include <string> /* std::string */
+#include <iostream> /* std::cout */
+namespace $$$ {
+//namespace environ { /* environという名前は使えないので注意すること */
+ void getenv(const char *const env_name, std::string& std_str) {
+	char *cp = ::getenv( env_name );
+	if (0 != cp) { std_str = cp; }
+ }
+}
+int main(int argc, char *argv[]) {
+	std::string user_name;
+	$$$::getenv("USERNAME", user_name);
+	//environ::getenv("USERNAME", user_name); /* environはだめ */
+	std::cout << user_name << "\n";
+	return 0;
+}
+< 確認プログラムここまで
+
+-tips 0010  2011-03-12  ::LoadLibrary()関数の戻りの型について
+	vc2005"msdn"では、
+		HMODULE LoadLibrary(
+			LPCTSTR lpFileName モジュールのファイル名 );
+	"猫でもわかる"での説明では、
+		HINSTANCE _p_lib;
+		_p_lib = LoadLibrary( "plugin/image_open/dll04.dll");
+	と型名が違う
+	これは、
+vc2005 MSDN
+vc2008 MSDN
+より
+typedef HINSTANCE HMODULE;	// WinDef.h
+typedef HANDLE HINSTANCE;	// WinDef.h
+typedef PVOID HANDLE;		// WinNT.h
+typedef void *PVOID;		// WinNT.h
+
+vc6.0 C:\Program Files\Microsoft Visual Studio\VC98\Include
+より
+typedef HINSTANCE HMODULE;      // WINDEF.H
+// HINSTANCE???
+typedef PVOID HANDLE;		// WINNT.H
+typedef void *PVOID;		// WINNT.H
+	となって、すべて同じであるため
+

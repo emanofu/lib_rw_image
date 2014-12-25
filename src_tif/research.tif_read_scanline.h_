@@ -1,0 +1,39 @@
+#ifndef tif_read_scanline_h
+#define tif_read_scanline_h
+
+#include "tif_read_handle.h"
+
+namespace igs {
+ namespace tif {
+  class read_scanline {
+  public:
+	read_scanline(
+		igs::tif::read_handle& cl_r_handle,
+		const unsigned int u_size,
+		unsigned char *ucharp_top
+	);
+	read_scanline(); /* コンポーネントとして使う時使用 */
+
+	void v_begin(  /* コンポーネントとして使う時使用 */
+		igs::tif::read_handle& cl_r_handle,
+		const unsigned int u_size,
+		unsigned char *ucharp_top
+	); /* 処理全体の初期設定 */
+	unsigned int u_count(void) const; /* v_segment()呼出べき回数 */
+	void v_segment(
+		igs::tif::read_handle& cl_r_handle
+	); /* 分割した部分処理(呼出毎順次処理) */
+  private:
+	unsigned char *_ucharp_current; /* 外部メモリ参照 */
+	unsigned int _u_size;
+	unsigned int _u_he;
+	unsigned int _u_bi;
+	unsigned int _u_phot;
+	unsigned int _u_sl_size;
+	unsigned int _u_read_total_size;
+	unsigned int _u_y;
+  };
+ }
+}
+
+#endif /* !tif_read_scanline_h */

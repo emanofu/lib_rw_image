@@ -1,0 +1,26 @@
+picに関するnamespaceの構成 2008-06-18 wed
+
+    igs
+    +-- pic
+	+-- header		reader&writerで使用
+	    +-- tag			Softimage(.pic)画像認識タグ値
+	    +-- type			画像のフィールド書式
+	    +-- compress_type		画像圧縮方法
+	    +-- channel			色チャンネルの存在ビット
+	    +-- struct parameters	ファイルヘッダ構造
+	    +-- struct channel_packet	チャンネルパケット
+
+	+-- extensions[]	reader&writerで使用
+
+	+-- read_handle		readerで使用
+	    +-- istag(-)	readerで使用
+	    +-- get_info(-)	readerで使用
+	    +-- get_size(-)	readerで使用
+	    +-- get_data(-)	readerで使用
+	+-- class decode	readerで使用
+
+	+-- class encode_write	writerで使用
+
+	+-- class reader	igs::image::readerを継承
+	+-- class writer	igs::image::writerを継承
+

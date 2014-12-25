@@ -1,0 +1,76 @@
+TIFF 6.0 Specification  Final.June 3, 1992  Orientation
+
+The orientation of the image with respect to the rows and columns.
+列と行に関する画像の方向
+
+Tag = 274 (112.H)
+Type = SHORT
+N = 1
+
+1 = The 0th row    represents the visual top of the image,
+	and the
+	0th column represents the visual left-hand side.
+	データ列(row)のゼロ位置は画像表示の上端を表し。
+	データ行(column)のゼロ位置は画像表示の左側を表す
+	TL
+2 = The 0th row represents    the visual top of the image,
+	and the
+	0th column represents the visual right-hand side.
+	データ列のゼロ位置は画像表示の上端を表し。
+	データ行のゼロ位置は画像表示の右側を表す
+	TR
+3 = The 0th row represents    the visual bottom of the image,
+	and the
+	0th column represents the visual right-hand side.
+	データ列のゼロ位置は画像表示の下端を表し。
+	データ行のゼロ位置は画像表示の右側を表す
+	BR
+4 = The 0th row    represents the visual bottom of the image,
+	and the
+	0th column represents the visual left-hand side.
+	データ列のゼロ位置は画像表示の下端を表し。
+	データ行のゼロ位置は画像表示の左側を表す
+	BL
+5 = The 0th row    represents the visual left-hand side of the image,
+	and the
+	0th column represents the visual top.
+	データ列のゼロ位置は画像表示の左側を表し、
+	データ行のゼロ位置は画像表示の上端を表す。
+	LT
+6 = The 0th row    represents the visual right-hand side of the image,
+	and the
+	0th column represents the visual top.
+	データ列のゼロ位置は画像表示の右側を表し、
+	データ行のゼロ位置は画像表示の上端を表す。
+	RT
+7 = The 0th row    represents the visual right-hand side of the image,
+	and the
+	0th column represents the visual bottom.
+	データ列のゼロ位置は画像表示の右側を表し、
+	データ行のゼロ位置は画像表示の下端を表す。
+	RB
+8 = The 0th row    represents the visual left-hand side of the image,
+	and the
+	0th column represents the visual bottom.
+	データ列のゼロ位置は画像表示の左側を表し、
+	データ行のゼロ位置は画像表示の下端を表す。
+	LB
+
+Default is 1(TL).
+
+Support for orientations other than 1 is not a Baseline TIFF requirement.
+1以外の方向のサポートは、Baseline TIFFの要件ではない。
+
+なお、OpenGLの画像は 4(BL).
+--------------------------------------------------------------
+/* 画像データの並びと、表示の上下左右 */
+tiff.h
+ ORIENTATION_TOPLEFT, /* row 0 top, col 0  left, tl   0 deg(TIFF,sgi) */
+ ORIENTATION_TOPRIGHT,  /* row 0 top, col 0 right, bl 180 deg */
+ ORIENTATION_BOTRIGHT,  /* row 0 bot, col 0 right, tl 180 deg */
+ ORIENTATION_BOTLEFT,   /* row 0 bot, col 0  left, bl   0 deg(OpenGL) */
+ ORIENTATION_LEFTTOP,   /* row 0  left, col 0 top, bl  90 deg */
+ ORIENTATION_RIGHTTOP,  /* row 0 right, col 0 top, tl  90 deg */
+ ORIENTATION_RIGHTBOT,  /* row 0 right, col 0 bot, bl 270 deg */
+ ORIENTATION_LEFTBOT,   /* row 0  left, col 0 bot, tl 270 deg */
+--------------------------------------------------------------

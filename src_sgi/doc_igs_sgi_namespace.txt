@@ -1,0 +1,28 @@
+sgiに関するnamespaceの構成  2008-06-18 wed
+
+    igs
+    +-- sgi
+	+-- header		reader&writerで使用
+	    +-- tag		SiliconGraphic(.rgb,.sgi)画像認識タグ値
+	    +-- compression	画像圧縮タイプ(parameters.c_storage)
+	    +-- form		画像書式タイプ(parameters.l_colormap)
+	    +-- resolution	解像度保存のための独自拡張
+	    +-- struct parameters ファイルヘッダ構造
+
+	+-- extensions[]	reader&writerで使用
+
+	+-- read_handle		readerで使用
+		+-- istag(-)	readerで使用
+		+-- get_info(-)	readerで使用
+		+-- get_size(-)	readerで使用
+		+-- get_data(-)	readerで使用
+
+	+-- class decode_rle	readerで使用
+	+-- class decode_verbatim readerで使用
+
+	+-- class rle_write	writerで使用
+	+-- class verbatim_write writerで使用
+
+	+-- class reader	igs::image::readerを継承
+	+-- class writer	igs::image::writerを継承
+

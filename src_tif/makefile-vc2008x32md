@@ -1,0 +1,97 @@
+.SUFFIXES: .obj .cxx
+# Need to setup 'Microsoft Visual Studio 2008(9.0)  C/C++ 15.00.21022.08'
+# call "C:\Program Files\Microsoft Visual Studio 9.0\Common7\Tools\vsvars32.bat"
+# dumpbin /exports xxxxx.dll
+# dumpbin /dependents xxxxx.dll
+# Caution : Must Not Set "LIB" or "INCLUDE" parameter with MS-C
+#---name-----------------------------------------------------
+COMPILE_TYPE = vc2008x32md
+FORMAT = tif
+READ_INCL =    igs_$(FORMAT)_reader.h
+WRIT_INCL =    igs_$(FORMAT)_writer.h
+READ_LIBR = libigs_$(FORMAT)_reader.lib
+WRIT_LIBR = libigs_$(FORMAT)_writer.lib
+READ_DLL  =    igs_$(FORMAT)_reader.dll
+WRIT_DLL  =    igs_$(FORMAT)_writer.dll
+READ_IMPO = libigs_$(FORMAT)_reader_imp.lib
+WRIT_IMPO = libigs_$(FORMAT)_writer_imp.lib
+READ_SRCS =\
+igs_image_function_invert.cxx\
+igs_tif_error.cxx\
+igs_tif_info.cxx\
+igs_tif_read_handle.cxx\
+igs_tif_read_strip.cxx\
+igs_tif_read_tile.cxx\
+igs_tif_reader.cxx
+WRIT_SRCS =\
+igs_tif_error.cxx\
+igs_tif_write_handle.cxx\
+igs_tif_write_strip.cxx\
+igs_tif_writer.cxx
+READ_PLUG_SRC = igs_tif_reader_plugin.cxx
+WRIT_PLUG_SRC = igs_tif_writer_plugin.cxx
+READ_OBJS = $(READ_SRCS:.cxx=.obj)
+WRIT_OBJS = $(WRIT_SRCS:.cxx=.obj)
+READ_PLUG_OBJ = $(READ_PLUG_SRC:.cxx=.obj)
+WRIT_PLUG_OBJ = $(WRIT_PLUG_SRC:.cxx=.obj)
+#DPATH_UTIL = ..\..\..\utility_tools\$(COMPILE_TYPE)
+DPATH_UTIL = %HOMEDRIVE%%%HOMEPATH%\utility_tools\$(COMPILE_TYPE)
+DPATH_INCL = $(DPATH_UTIL)\include
+DPATH_LIBR = $(DPATH_UTIL)\lib
+DPATH_IMPO = $(DPATH_UTIL)\implib
+DPATH_PLUG = $(DPATH_UTIL)\plugin
+DPATH_IMAG = $(DPATH_PLUG)\image
+DPATH_OPEN = $(DPATH_IMAG)\open
+DPATH_SAVE = $(DPATH_IMAG)\save
+DIR_TIFF = tiff-3.9.4
+INCS = /I. /I../src_common /I$(DPATH_INCL) /I$(DPATH_UTIL)\$(DIR_TIFF)\include
+IMPS =\
+$(DPATH_IMPO)\libigs_image_irw_imp.lib\
+$(DPATH_IMPO)\libigs_resource_irw_imp.lib\
+$(DPATH_UTIL)\$(DIR_TIFF)\implib\libtiff_i.lib
+#---command--------------------------------------------------
+CC = cl
+CC_OPTIONS = $(CXXFLAGS) /W4 /MD /EHa /O2 /wd4819 $(INCS) /DNOMINMAX
+# /wd4819 : Stop warning message by EUC-JP Code in comment
+# /DNOMINMAX : not define min(),max()
+LD = cl
+LD_OPTIONS = $(LDFLAGS) $(CC_OPTIONS) /LD /DIGS_TIF_EXPORT="__declspec(dllexport)" $(IMPS)
+# /LD     : create xxxxx.dll(not .exe)
+# /DIGS_xxx_EXPORT="__declspec(dllexport)"  : export
+#---action---------------------------------------------------
+all: cleanobj $(READ_LIBR) $(WRIT_LIBR) $(READ_DLL) $(WRIT_DLL)
+cleanobj:
+	del $(READ_OBJS) $(READ_PLUG_OBJ) $(READ_DLL).manifest $(READ_IMPO) *.exp
+	del $(WRIT_OBJS) $(WRIT_PLUG_OBJ) $(WRIT_DLL).manifest $(WRIT_IMPO) *.exp
+$(READ_LIBR): $(READ_OBJS)
+	lib /out:$@ $?
+$(WRIT_LIBR): $(WRIT_OBJS)
+	lib /out:$@ $?
+	del $(READ_OBJS)
+	del $(WRIT_OBJS)
+$(READ_DLL): $(READ_SRCS) $(READ_PLUG_SRC)
+	$(LD) $(LD_OPTIONS) /Fe$@ $? /link /implib:$(READ_IMPO)
+	del $(READ_OBJS) $(READ_PLUG_OBJ) $(READ_DLL).manifest $(READ_IMPO) *.exp
+$(WRIT_DLL): $(WRIT_SRCS) $(WRIT_PLUG_SRC)
+	$(LD) $(LD_OPTIONS) /Fe$@ $? /link /implib:$(WRIT_IMPO)
+	del $(WRIT_OBJS) $(WRIT_PLUG_OBJ) $(WRIT_DLL).manifest $(WRIT_IMPO) *.exp
+.cxx.obj:
+	$(CC) $(CC_OPTIONS) /c $<
+inst:
+	if not exist $(DPATH_UTIL) (mkdir $(DPATH_UTIL))
+	if not exist $(DPATH_INCL) (mkdir $(DPATH_INCL))
+	copy /v /y /b $(READ_INCL) $(DPATH_INCL)
+	copy /v /y /b $(WRIT_INCL) $(DPATH_INCL)
+	if not exist $(DPATH_LIBR) (mkdir $(DPATH_LIBR))
+	move $(READ_LIBR) $(DPATH_LIBR)
+	move $(WRIT_LIBR) $(DPATH_LIBR)
+	if not exist $(DPATH_PLUG) (mkdir $(DPATH_PLUG))
+	if not exist $(DPATH_IMAG) (mkdir $(DPATH_IMAG))
+	if not exist $(DPATH_OPEN) (mkdir $(DPATH_OPEN))
+	move $(READ_DLL) $(DPATH_OPEN)/$(FORMAT).dll
+	if not exist $(DPATH_SAVE) (mkdir $(DPATH_SAVE))
+	move $(WRIT_DLL) $(DPATH_SAVE)/$(FORMAT).dll
+clean:
+	del $(READ_OBJS) $(READ_PLUG_OBJ) $(READ_DLL).manifest $(READ_IMPO) *.exp
+	del $(WRIT_OBJS) $(WRIT_PLUG_OBJ) $(WRIT_DLL).manifest $(WRIT_IMPO)
+	del $(READ_LIBR) $(WRIT_LIBR) $(READ_DLL) $(WRIT_DLL)

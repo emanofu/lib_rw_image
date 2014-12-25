@@ -1,0 +1,21 @@
+tifに関するnamespaceの構成  2008-06-21 sat
+
+    igs
+    +-- image
+	+-- function
+	    +-- invert(-)	readerで使用
+    +-- tif
+ 	+-- error_handler(-)	reader&writerで使用
+	+-- error_msg();	reader&writerで使用
+	+-- extensions[]	reader&writerで使用
+
+	+-- class read_handle	readerで使用
+	+-- class read_strip	readerで使用
+	+-- class read_tile	readerで使用
+
+	+-- class write_handle	writerで使用
+	+-- class write_strip	writerで使用
+
+	+-- class reader	igs::image::readerを継承
+	+-- class writer	igs::image::writerを継承
+

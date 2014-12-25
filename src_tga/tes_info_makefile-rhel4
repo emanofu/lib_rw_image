@@ -1,0 +1,36 @@
+.SUFFIXES: .o .cxx
+# help:ldd $(EXE)でsoへのリンクリスト表示
+#---name------------------------------------------------------
+NAME = tes_info_bin
+COMPILE_TYPE = rhel4
+AR_EXE = $(NAME)-$(COMPILE_TYPE)-a
+SO_EXE = $(NAME)-$(COMPILE_TYPE)-so
+SRCS = igs_tga_info.cxx
+OBJS = $(SRCS:.cxx=.o)
+#DPATH_UTIL = ../../../utility_tools/$(COMPILE_TYPE)
+DPATH_UTIL = ${HOME}/utility_tools/$(COMPILE_TYPE)
+INCS = -I. -I$(DPATH_UTIL)/include
+LIBS =\
+$(DPATH_UTIL)/lib/libigs_tga_reader.a\
+$(DPATH_UTIL)/lib/libigs_resource_irw.a\
+SOS =\
+$(DPATH_UTIL)/so/libigs_resource_irw.so\
+-ldl
+#---command---------------------------------------------------
+CC = g++
+CC_OPTIONS = $(CXXFLAGS) -Wall -O2 -g -DDEBUG_TGA_INFO
+LD = g++
+# ldだとエラーになる.
+LD_OPTIONS = $(LDFLAGS) $(CC_OPTIONS) $(INCS)
+#---action----------------------------------------------------
+all: check $(AR_EXE) cleanobj
+check:
+	if [ `uname -s` != "Linux" ] ; then echo "Bad makefile"; exit 1; fi
+$(AR_EXE): $(SRCS)
+	$(LD) $(LD_OPTIONS) $? $(LIBS) -o $@
+$(SO_EXE): $(SRCS)
+	$(LD) $(LD_OPTIONS) -DUSE_IMAGE_RW_PLUGIN $? $(SOS) -o $@
+cleanobj:
+	rm -f $(OBJS)
+clean: check
+	rm -f $(OBJS) $(AR_EXE) $(SO_EXE)

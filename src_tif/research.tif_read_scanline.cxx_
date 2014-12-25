@@ -1,0 +1,119 @@
+#include <limits> /* std::numeric_limits */
+#include <sstream> /* std::ostringstream */
+#include <stdexcept> /* std::domain_error */
+#include "function_invert.h"
+#include "tif_error.h"
+#include "tif_read_scanline.h"
+
+/* scanline読み込み(mono bwを除く) */
+/*--------------------------------------------------------*/
+using igs::tif::read_scanline;
+
+read_scanline::read_scanline(igs::tif::read_handle& cl_r_handle, const unsigned int u_size, unsigned char *ucharp_top):
+	_ucharp_current(ucharp_top),
+	_u_size(u_size),
+	_u_he(0),
+	_u_bi(0),
+	_u_phot(0),
+	_u_sl_size(0),
+	_u_read_total_size(0),
+	_u_y(0)
+{
+	this->v_begin(cl_r_handle,u_size,ucharp_top);
+}
+read_scanline::read_scanline(void):
+	_ucharp_current(0),
+	_u_size(0),
+	_u_he(0),
+	_u_bi(0),
+	_u_phot(0),
+	_u_sl_size(0),
+	_u_read_total_size(0),
+	_u_y(0)
+{
+}
+void read_scanline::v_begin(igs::tif::read_handle& cl_r_handle, const unsigned int u_size, unsigned char *ucharp_top)
+{
+	this->_ucharp_current = ucharp_top;
+	this->_u_size = u_size;
+
+	unsigned int
+		ww = 0,
+		dd = 0;
+
+	this->_u_he	= cl_r_handle.u_he();
+	ww		= cl_r_handle.u_wi();
+	dd	= cl_r_handle.u_ch();
+	this->_u_bi	= cl_r_handle.u_bi();
+	this->_u_phot	= cl_r_handle.u_photom();
+
+	this->_u_sl_size = ww * dd * this->_u_bi /
+		std::numeric_limits<unsigned char>::digits;
+
+	this->_u_read_total_size = 0;
+	this->_u_y = 0;
+}
+
+unsigned int read_scanline::u_count(void) const
+{
+	return this->_u_he;
+}
+
+void read_scanline::v_segment(igs::tif::read_handle& cl_r_handle)
+{
+	/* 呼出回数チェック */
+	if (this->_u_he <= this->_u_y) {
+		std::ostringstream os;
+		os	<< "over call TIFFReadScanline(,,"
+			<< this->_u_y
+			<< ",0)";
+		throw std::domain_error(os.str());
+	}
+	/* memory overチェック */
+	this->_u_read_total_size += TIFFScanlineSize(cl_r_handle);
+	if (this->_u_size <= this->_u_read_total_size) {
+		std::ostringstream os;
+		os	<< "over memory<"
+			<< this->_u_size
+			<< "> TIFFReadScanline(,,"
+			<< this->_u_y
+			<< ",0)";
+		throw std::domain_error(os.str());
+	}
+/*
+	ファイルから1スキャンライン読み込み
+	圧縮フォーマットの場合は、
+	ゼロライン(yy=0)から順にとらないと読み込めない
+	int TIFFReadScanline(
+		TIFF* tif, tdata_t buf, uint32 row, tsample_t sample);
+	typedef void* tdata_t;
+
+	1スキャンライン分のみ、読み込む
+	なお、
+	Compression algorithm does not support random access.
+	つまり、圧縮フォーマットの場合は、
+	ゼロライン(yy=0)から順にとらないと読み込めない
+*/
+	const int i_ret = TIFFReadScanline(
+		cl_r_handle, this->_ucharp_current, this->_u_y, 0
+	);
+	if (i_ret < 0) {
+		throw std::domain_error( cl_r_handle.get_error_msg() );
+	}
+
+	/* 必要なら白黒反転 */
+	if (PHOTOMETRIC_MINISWHITE == this->_u_phot) {
+		igs::image::function::invert(
+			this->_u_bi,
+			this->_u_sl_size,
+			this->_ucharp_current
+		);
+	}
+
+	/* 呼出回数カウントアップ */
+	++ this->_u_y;
+
+	/* 次のscanlineへ移動 */
+	this->_ucharp_current += this->_u_sl_size;
+}
+/*--------------------------------------------------------*/

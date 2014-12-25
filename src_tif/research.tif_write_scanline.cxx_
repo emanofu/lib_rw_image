@@ -1,0 +1,112 @@
+#include <sstream> /* std::ostringstream */
+#include <stdexcept> /* std::domain_error */
+#include "tif_error.h"
+#include "tif_write_scanline.h"
+
+/* scanline読み込み(mono bwを除く) */
+using igs::tif::write_scanline;
+/*--------------------------------------------------------*/
+
+write_scanline::write_scanline(
+igs::tif::write_handle& cl_w_handle,
+const unsigned int u_bytes_sl_size,
+const unsigned int u_he,
+const unsigned int u_mem_size,
+unsigned char *ucharp_top
+):
+	_u_bytes_sl_size(u_bytes_sl_size),
+	_u_h(u_he),
+	_u_y(0),
+	_u_mem_size(u_mem_size),
+	_ucharp_current_image(ucharp_top),
+	_u_write_total_size(0)
+{
+	this->v_begin(
+		cl_w_handle,u_bytes_sl_size,u_he,u_mem_size,ucharp_top
+	);
+}
+write_scanline::write_scanline(void):
+	_u_bytes_sl_size(0),
+	_u_h(0),
+	_u_y(0),
+	_u_mem_size(0),
+	_ucharp_current_image(0),
+	_u_write_total_size(0)
+{
+}
+
+void write_scanline::v_begin(
+igs::tif::write_handle& cl_w_handle,
+const unsigned int u_bytes_sl_size,
+const unsigned int u_he,
+const unsigned int u_mem_size,
+unsigned char *ucharp_top
+)
+{
+	this->_u_bytes_sl_size = u_bytes_sl_size;
+	this->_u_h = u_he;
+	this->_u_y = 0;
+
+	this->_u_mem_size = u_mem_size;
+	this->_ucharp_current_image = ucharp_top;
+	this->_u_write_total_size = 0;
+}
+
+unsigned int write_scanline::u_count(void) const
+{
+	return this->_u_h;
+}
+
+void write_scanline::v_segment(igs::tif::write_handle& cl_w_handle)
+{
+	/* 呼出回数チェック */
+	if (this->_u_h <= this->_u_y) {
+		std::ostringstream os;
+		os	<< "over call TIFFWriteScanline(,,"
+			<< this->_u_y
+			<< ",0)";
+		throw std::domain_error(os.str());
+	}
+	/* memory overチェック */
+	this->_u_write_total_size += TIFFScanlineSize(cl_w_handle);
+	if (this->_u_mem_size <= this->_u_write_total_size) {
+		std::ostringstream os;
+		os	<< "over memory<"
+			<< this->_u_mem_size
+			<< "> TIFFWriteScanline(,,"
+			<< this->_u_y
+			<< ",0)";
+		throw std::domain_error(os.str());
+	}
+/*
+	int TIFFWriteScanline(
+		TIFF* tif,
+		tdata_t buf,
+		uint32 row,
+		tsample_t sample);
+
+	typedef void* tdata_t;
+*/
+	int i_ret = TIFFWriteScanline(
+		cl_w_handle,
+		(tdata_t)(this->_ucharp_current_image),
+		this->_u_y,
+		0
+	);
+	if (i_ret < 0) {
+		/***std::ostringstream os;
+		os	<< "TIFFWriteScanline(,,"
+			<< this->_u_y
+			<< ",0) returns -1";
+		throw std::domain_error(os.str());***/
+		// throw std::domain_error(igs::tif::get_error_msg());
+		throw std::domain_error(cl_w_handle.get_error_msg());
+	}
+
+	/* 呼出回数カウントアップ */
+	++ this->_u_y;
+
+	/* 次のscanlineへ移動 */
+	this->_ucharp_current_image += this->_u_bytes_sl_size;
+}
+/*--------------------------------------------------------*/
